@@ -22,5 +22,5 @@ app.get('/login', (req, res)=> {
 });
 // get user by id
 app.get('/get-user', async (req, res) => {
-    
+    res.json({/* User should be returned here*/})
 });
