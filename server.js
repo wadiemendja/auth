@@ -1,26 +1,65 @@
-const { hash, genSalt } = require('bcrypt');
 const express = require('express');
-const path = require('path');
-const { ConnectToDatabase } = require('./db');
+const bodyParser = require('body-parser');
+const session = require('express-session');
+const crypto = require('crypto');
+
 const app = express();
-// middlewares
-app.use(express.json());
-// give access to public folder only (for the client)
-app.use(express.static(path.join(__dirname, 'public')));
-// connecting to MySQL database
-ConnectToDatabase();
-// listening and setting up the PORT
-const port = process.env.PORT || 8082;
-app.listen(port, () => console.log('Listening to localhost:' + port));
-// home page request
-app.get('/', async (req, res) => {
-    res.sendFile(__dirname + '/public/index.html');
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+// creating session ID 'secret'
+const secret = crypto.randomBytes(64).toString('hex');
+console.log(secret);
+app.use(session({
+  secret: secret,
+  resave: false,
+  saveUninitialized: true
+}));
+
+// Serve the login page
+app.get('/', (req, res) => {
+  res.send(`
+    <h1>Login</h1>
+    <form method="post" action="/login">
+      <div>
+        <label>Username:</label>
+        <input type="text" name="username">
+      </div>
+      <div>
+        <label>Password:</label>
+        <input type="password" name="password">
+      </div>
+      <div>
+        <button type="submit">Login</button>
+      </div>
+    </form>
+  `);
 });
-// login page request
-app.get('/login', (req, res)=> {
-    res.sendFile(__dirname + '/public/login.html');
+
+// Handle the login form submission
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  // Check if the username and password are correct
+  if (username === 'admin' && password === 'password') {
+    // Set a session variable to indicate that the user is logged in
+    req.session.isLoggedIn = true;
+    res.redirect('/home');
+  } else {
+    res.send('Invalid username or password');
+  }
 });
-// get user by id
-app.get('/get-user', async (req, res) => {
-    res.json({/* User should be returned here*/})
+
+// Serve the home page
+app.get('/home', (req, res) => {
+  // Check if the user is logged in
+  if (req.session.isLoggedIn) {
+    res.send('<h1>Welcome to the home page</h1>');
+  } else {
+    res.redirect('/');
+  }
+});
+
+// Start the server
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
 });
